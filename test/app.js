@@ -23,25 +23,30 @@
 
 
 var generator = require('./util/generator'),
-    helpers = require('yeoman-generator').test;
+    helpers = require('yeoman-generator').test,
+    assert = require('assert');
 
 
 describe('App', function () {
     var dependencies = [
-        '../../app',
-        '../../controller',
-        '../../locale',
-        '../../model',
-        '../../page',
-        '../../template'
-    ];
+            '../../app',
+            '../../controller',
+            '../../locale',
+            '../../model',
+            '../../page',
+            '../../template'
+        ],
+        prompt;
 
-    var prompt = {
-        appName: 'Awesomeness',
-        appDescription: 'Check out my new awesome app!',
-        appAuthor: 'Me',
-        requireJs: false
-    };
+    beforeEach(function () {
+        prompt = {
+            appName: 'Awesomeness',
+            appDescription: 'Check out my new awesome app!',
+            appAuthor: 'Me',
+            requireJs: false,
+            cssFramework: 'LESS'
+        };
+    });
 
 
     it('creates dot files', function (done) {
@@ -60,8 +65,8 @@ describe('App', function () {
     });
 
 
-    it('creates project files', function (done) {
-        generator('app', dependencies, [], prompt, function () {
+    it('creates project files with LESS CSS Framework', function (done) {
+        generator('app', dependencies, [], prompt, function (app) {
             helpers.assertFiles([
                 'Gruntfile.js',
                 'README.md',
@@ -79,17 +84,58 @@ describe('App', function () {
                 'public/templates/layouts/master.dust'
             ]);
 
+            helpers.assertFile('Gruntfile.js', /app\.less/g);
+            helpers.assertFile('Gruntfile.js', /'jshint', 'less',/g);
+            
+            helpers.assertFile('config/middleware.json', /"less": "css"/g);
+            helpers.assertFile('config/middleware.json', /"sass": false/g);
+
+            assert(app.npmDependencies[0] === 'less');
+            assert(app.npmDevDependencies[0] === 'grunt-contrib-less');
+
+            done();
+        });
+    });
+
+    it('creates project files with SASS CSS Framework', function (done) {
+        prompt.cssFramework = 'SASS';
+
+        generator('app', dependencies, [], prompt, function (app) {
+            helpers.assertFiles([
+                'Gruntfile.js',
+                'README.md',
+                'bower.json',
+                'index.js',
+                'package.json',
+                'config/app.json',
+                'config/middleware.json',
+                'controllers/index.js',
+                'locales/US/en/index.properties',
+                'models/index.js',
+                'public/css/app.scss',
+                'public/js/app.js',
+                'public/templates/index.dust',
+                'public/templates/layouts/master.dust'
+            ]);
+
+            helpers.assertFile('Gruntfile.js', /app\.scss/g);
+            helpers.assertFile('Gruntfile.js', /'jshint', 'sass',/g);
+            
+            helpers.assertFile('config/middleware.json', /"sass": "css"/g);
+            helpers.assertFile('config/middleware.json', /"less": false/g);
+
+            assert(app.npmDependencies[0] === 'node-sass');
+            assert(app.npmDevDependencies[0] === 'grunt-contrib-sass');
+
             done();
         });
     });
 
 
     it('creates an app bootstrapped with RequireJS', function (done) {
-        var myPrompt = JSON.parse(JSON.stringify(prompt));
+        prompt.requireJs = true;
 
-        myPrompt.requireJs = true;
-
-        generator('app', dependencies, [], myPrompt, function () {
+        generator('app', dependencies, [], prompt, function () {
             helpers.assertFiles([
                 ['public/templates/layouts/master.dust', /require\.js/],
                 ['public/js/app.js', /require\(/],

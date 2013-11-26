@@ -16,6 +16,8 @@ module.exports = function generator(type, dependencies, args, prompt, done) {
         helpers.mockPrompt(app, prompt);
 
         app.options['skip-install'] = true;
-        app.run({}, done);
+        app.run({}, function () {
+            done(app);
+        });
     });
 };

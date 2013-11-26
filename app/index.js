@@ -24,7 +24,8 @@ var util = require('util'),
     path = require('path'),
     crypto = require('crypto'),
     yeoman = require('yeoman-generator'),
-    kraken = require('../lib/kraken');
+    kraken = require('../lib/kraken'),
+    dependencies = require('./dependencies');
 
 
 var Generator = module.exports = function Generator(args, options, config) {
@@ -48,7 +49,8 @@ var Generator = module.exports = function Generator(args, options, config) {
             skipInstall: options['skip-install'],
             callback: function () {
                 that.bowerInstall(that.bowerDependencies, { save: true });
-                that.npmInstall(that.npmDependencies, { saveDev: true});
+                that.npmInstall(that.npmDevDependencies, { saveDev: true});
+                that.npmInstall(that.npmDependencies, {save: true});
             }
         });
     });
@@ -56,6 +58,7 @@ var Generator = module.exports = function Generator(args, options, config) {
     this.pkg = JSON.parse(this.readFileAsString(path.join(__dirname, '../package.json')));
     this.bowerDependencies = [];
     this.npmDependencies = [];
+    this.npmDevDependencies = [];
     this.secretHash = crypto.randomBytes(20).toString('hex');
 };
 
@@ -90,15 +93,31 @@ Generator.prototype.askFor = function askFor() {
         default: true
     });
 
+    prompts.push({
+        type: 'list',
+        name: 'cssFramework',
+        message: "CSS Framework",
+        choices: ['LESS', 'SASS'],
+        default: 0
+    });
+
     this.prompt(prompts, function (props) {
         this.appName = props.appName;
         this.appDescription = JSON.stringify( props.appDescription );
         this.appAuthor = JSON.stringify( props.appAuthor );
+        
+        // Load cssFramework information from dependencies.js
+        this.cssFramework = dependencies[props.cssFramework];
+        // Set the choice to true; e.g this.cssFramework.LESS = true
+        this.cssFramework[props.cssFramework] = true;
 
         if ((this.requireJs = props.requireJs)) {
             this.bowerDependencies.push('requirejs');
-            this.npmDependencies.push('grunt-contrib-requirejs');
+            this.npmDevDependencies.push('grunt-contrib-requirejs');
         }
+
+        this.npmDependencies.push(this.cssFramework.dependency);
+        this.npmDevDependencies.push(this.cssFramework.gruntTask);
 
         callback();
     }.bind(this));
@@ -136,9 +155,11 @@ Generator.prototype.projectfiles = function projectfiles() {
     this.copy('jshintrc', '.jshintrc');
     this.copy('editorconfig', '.editorconfig');
     this.copy('bowerrc', '.bowerrc');
-    this.copy('Gruntfile.js', 'Gruntfile.js');
+    
+    this.template('_Gruntfile.js', 'Gruntfile.js');
 
-    this.copy('public/css/app.less', 'public/css/app.less');
+    this.template('public/css/_app.style', 'public/css/app.' + this.cssFramework.ext);
+
     this.template('public/js/_app.js', 'public/js/app.js');
 
     if (this.requireJs) {

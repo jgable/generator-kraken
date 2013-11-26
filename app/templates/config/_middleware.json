@@ -3,6 +3,10 @@
         "session": {
             "module": "memory",
             "secret": "<%= secretHash %>"
+        },
+        "compiler": {
+            "sass": <%= cssFramework.compiler.sass %>,
+            "less": <%= cssFramework.compiler.less %>
         }
     }
 }

@@ -12,7 +12,7 @@ app.configure = function configure(nconf, next) {
 
 
 app.requestStart = function requestStart(server) {
-    // Fired at the beginning of an incoming request
+    // Fired before most middleware has been registered
 };
 
 
